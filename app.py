@@ -98,6 +98,10 @@ def home():
 def brewing_tools():
     return render_template('brewing_tools.html')
 
+@app.route('/my-brews')
+def my_brews():
+    return render_template('my_brews.html')
+
 @app.route('/predict', methods=['POST'])
 def predict():
     if predictor is None:

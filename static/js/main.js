@@ -70,6 +70,19 @@ if (formEl) formEl.addEventListener('submit', async function(e) {
 			container.innerHTML = '';
 			chips.forEach(ch => container.appendChild(ch));
 
+			// Save to history
+			savePrediction({
+				brewing_method: document.getElementById('brewing_method').value,
+				bean_type: document.getElementById('bean_type').value,
+				roast_level: document.getElementById('roast_level').value,
+				grind_size: document.getElementById('grind_size').value,
+				water_temp: document.getElementById('water_temp').value,
+				brew_time: document.getElementById('brew_time').value,
+				ratio: document.getElementById('coffee_water_ratio').value,
+				acidity: document.getElementById('acidity_pref').value,
+				bitterness: document.getElementById('bitterness_pref').value,
+			}, data.prediction);
+
 			resultsDiv.style.setProperty('display', 'block', 'important');
 			resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		} else {
@@ -125,3 +138,45 @@ function createChip(iconClass, label, color) {
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+
+// ── Prediction History (localStorage) ──
+const HISTORY_KEY = 'coffee_brew_history';
+const MAX_HISTORY = 50;
+
+function savePrediction(params, result) {
+	const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+	history.unshift({
+		id: Date.now(),
+		timestamp: new Date().toISOString(),
+		params,
+		result
+	});
+	if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+	localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+
+// ── Auto-fill form from URL params (reuse from My Brews) ──
+(function() {
+	const params = new URLSearchParams(window.location.search);
+	if (!params.has('m')) return;
+
+	const map = {
+		m: 'brewing_method', b: 'bean_type', r: 'roast_level', g: 'grind_size',
+		wt: 'water_temp', bt: 'brew_time', cr: 'coffee_water_ratio',
+		ac: 'acidity_pref', bi: 'bitterness_pref'
+	};
+
+	Object.entries(map).forEach(([key, id]) => {
+		const el = document.getElementById(id);
+		const val = params.get(key);
+		if (el && val) {
+			el.value = val;
+			el.dispatchEvent(new Event('input'));
+		}
+	});
+
+	// Clean URL without reload
+	window.history.replaceState({}, '', '/');
+})();

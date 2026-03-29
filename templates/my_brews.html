@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/my-brews.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="brews-page">
+    <div class="brews-header">
+        <div>
+            <div class="section-badge"><i class="fas fa-history"></i> My Brews</div>
+            <h2>Prediction History</h2>
+            <p class="subtitle">Track and compare your brewing experiments</p>
+        </div>
+        <div class="brews-actions">
+            <span class="brew-count" id="brewCount">0 brews</span>
+            <button class="btn btn-outline btn-sm" id="clearHistory" title="Clear all history">
+                <i class="fas fa-trash-alt"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="stats-row" id="statsRow" style="display:none;">
+        <div class="stat-card">
+            <div class="stat-value" id="statAvg">&mdash;</div>
+            <div class="stat-label">Avg Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statBest">&mdash;</div>
+            <div class="stat-label">Best Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statTotal">&mdash;</div>
+            <div class="stat-label">Total Brews</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statFavMethod">&mdash;</div>
+            <div class="stat-label">Fav Method</div>
+        </div>
+    </div>
+
+    <!-- Sort / filter -->
+    <div class="brews-toolbar" id="brewsToolbar" style="display:none;">
+        <div class="filter-group">
+            <label for="filterMethod"><i class="fas fa-filter"></i></label>
+            <select id="filterMethod">
+                <option value="">All Methods</option>
+                <option value="Pour-over">Pour-over</option>
+                <option value="French Press">French Press</option>
+                <option value="Espresso">Espresso</option>
+                <option value="Cold Brew">Cold Brew</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sortBy"><i class="fas fa-sort"></i></label>
+            <select id="sortBy">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="highest">Highest Score</option>
+                <option value="lowest">Lowest Score</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- History list -->
+    <div id="brewsList"></div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon"><i class="fas fa-mug-hot"></i></div>
+        <h3>No brews yet</h3>
+        <p>Head to the <a href="/">Flavor Lab</a> and make your first prediction.</p>
+    </div>
+</div>
+
+<style>
+.brews-page { max-width: 900px; margin: 0 auto; }
+
+.brews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.brews-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+.brew-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.75rem; }
+
+/* Stats */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-card {
+    background: rgba(32, 28, 26, 0.85);
+    border: 1px solid rgba(168, 130, 95, 0.18);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    text-align: center;
+}
+.stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold-light), var(--copper));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+}
+.stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+}
+
+/* Toolbar */
+.brews-toolbar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.filter-group label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.filter-group select {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    background-size: 14px;
+    border-radius: var(--radius-sm);
+}
+
+/* Brew cards */
+.brew-card {
+    background: rgba(32, 28, 26, 0.85);
+    border: 1px solid rgba(168, 130, 95, 0.12);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 0.75rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.25rem;
+    align-items: center;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    animation: fadeIn 0.3s ease;
+}
+.brew-card:hover {
+    border-color: rgba(168, 130, 95, 0.25);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.brew-score-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid;
+    flex-shrink: 0;
+}
+.brew-score-badge .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.brew-score-badge .lbl {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+    margin-top: 1px;
+}
+.score-high { border-color: rgba(107, 143, 94, 0.5); color: #8FBF7E; background: rgba(107, 143, 94, 0.08); }
+.score-mid  { border-color: rgba(212, 160, 84, 0.4); color: var(--gold-light); background: rgba(212, 160, 84, 0.06); }
+.score-low  { border-color: rgba(196, 91, 74, 0.4); color: #E08070; background: rgba(196, 91, 74, 0.06); }
+
+.brew-details { min-width: 0; }
+.brew-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+}
+.brew-method {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+.brew-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.brew-params {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.brew-tag {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(212, 160, 84, 0.06);
+    border: 1px solid rgba(212, 160, 84, 0.1);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.brew-interpretation {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 0.4rem;
+    line-height: 1.5;
+}
+
+.brew-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+.brew-action-btn {
+    background: none;
+    border: 1px solid rgba(168, 130, 95, 0.15);
+    color: var(--text-muted);
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+.brew-action-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold-dark);
+    background: rgba(212, 160, 84, 0.06);
+}
+.brew-action-btn.delete:hover {
+    color: var(--accent-red);
+    border-color: var(--accent-red);
+    background: rgba(196, 91, 74, 0.06);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+.empty-icon {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    opacity: 0.4;
+}
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+.empty-state p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+.empty-state a {
+    color: var(--gold);
+    text-decoration: none;
+}
+.empty-state a:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .brew-card { grid-template-columns: auto 1fr; }
+    .brew-actions { flex-direction: row; grid-column: 1 / -1; justify-content: flex-end; }
+}
+@media (max-width: 480px) {
+    .brews-header { flex-direction: column; }
+    .brew-card { grid-template-columns: 1fr; text-align: center; }
+    .brew-score-badge { margin: 0 auto; }
+    .brew-meta { justify-content: center; }
+    .brew-params { justify-content: center; }
+    .brew-actions { justify-content: center; }
+}
+</style>
+
+{% endblock %}
