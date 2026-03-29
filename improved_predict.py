@@ -33,15 +33,11 @@ class CoffeeFlavorPredictor:
         self.numeric_features = []
         self.categorical_features = []
         self.feature_names = []
-        self.feature_engineering = None
         self.expected_columns = [
             'Brewing_Method', 'Bean_Type', 'Roast_Level', 'Grind_Size',
             'Water_Temp_C', 'Brew_Time_sec', 'Coffee_Water_Ratio',
             'Acidity_Pref', 'Bitterness_Pref'
         ]
-        
-        # Initialize feature engineering
-        self.feature_engineering = AdvancedFeatureEngineering()
         
         if model_path:
             self.load_model(model_path)
@@ -86,8 +82,6 @@ class CoffeeFlavorPredictor:
             else:
                 # For backward compatibility with old format
                 self.model = model_data
-                if hasattr(self.model, 'feature_engineering'):
-                    self.feature_engineering = self.model.feature_engineering
             
             logger.info(f"Successfully loaded model from {model_path}")
             
