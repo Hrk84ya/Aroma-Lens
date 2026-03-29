@@ -323,9 +323,10 @@ def train_model(X_train, y_train, use_cross_validation=True):
                 X_train, y_train, test_size=0.2, random_state=42, stratify=pd.qcut(y_train, q=5, labels=False, duplicates='drop')
             )
             
-            # Preprocess the split training data
+            # Preprocess the split training data using the SAME scaler
+            # fitted on the full training set to avoid data leakage
             X_train_split_processed, _, _ = preprocess_data(
-                X_train_split, fit_scaler=True
+                X_train_split, scaler=scaler, fit_scaler=False
             )
             
             # Apply feature engineering to split data
