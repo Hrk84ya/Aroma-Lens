@@ -117,12 +117,13 @@ class CoffeeFlavorPredictor:
         df = pd.DataFrame([input_data])
         
         # Type conversion and validation
+        # Ranges match the training dataset (Acidity/Bitterness start at 0)
         numeric_fields = {
-            'Water_Temp_C': (85, 100),  # Typical coffee brewing temperature range
-            'Brew_Time_sec': (30, 600),  # 30 seconds to 10 minutes
+            'Water_Temp_C': (80, 100),  # Brewing temperature range
+            'Brew_Time_sec': (15, 600),  # 15 seconds to 10 minutes
             'Coffee_Water_Ratio': (0.04, 0.08),  # 4-8g per 100ml
-            'Acidity_Pref': (1, 10),  # 1-10 scale
-            'Bitterness_Pref': (1, 10)  # 1-10 scale
+            'Acidity_Pref': (0, 10),  # 0-10 scale (dataset includes 0)
+            'Bitterness_Pref': (0, 10)  # 0-10 scale (dataset includes 0)
         }
         
         for field, (min_val, max_val) in numeric_fields.items():
