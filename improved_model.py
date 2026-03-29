@@ -2,16 +2,13 @@ import pandas as pd
 import numpy as np
 import joblib
 import xgboost as xgb
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder, RobustScaler
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor, StackingRegressor
-from sklearn.linear_model import ElasticNet, Ridge
-from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_percentage_error
-from sklearn.feature_selection import SelectKBest, f_regression, RFE
-from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest, f_regression
 import optuna
 import logging
 from datetime import datetime
@@ -163,28 +160,6 @@ def load_and_preprocess_data(filepath='synthetic_coffee_dataset.csv'):
     except Exception as e:
         logger.error(f"Error loading data: {str(e)}")
         raise
-
-def create_preprocessor():
-    """Create preprocessing pipeline."""
-    numeric_features = ['Water_Temp_C', 'Brew_Time_sec', 'Coffee_Water_Ratio', 
-                      'Acidity_Pref', 'Bitterness_Pref']
-    categorical_features = ['Brewing_Method', 'Bean_Type', 'Roast_Level', 'Grind_Size']
-    
-    numeric_transformer = Pipeline(steps=[
-        ('scaler', StandardScaler())
-    ])
-    
-    categorical_transformer = Pipeline(steps=[
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-    ])
-    
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
-        ])
-    
-    return preprocessor
 
 def preprocess_data(X, scaler=None, fit_scaler=False, feature_columns=None):
     """Preprocess the data with consistent handling of features."""
