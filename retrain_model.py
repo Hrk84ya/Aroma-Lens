@@ -12,26 +12,32 @@ def main():
     print("Starting model training...")
     
     try:
-        # Train a new model
+        # Train a new model — returns a dict with 'model', 'metrics', 'dataset_info'
         train_result = train_model()
         
-        # The train_model function might return a tuple or just the model path
-        if isinstance(train_result, tuple):
-            model_path = train_result[0]  # Get the first item if it's a tuple
-        else:
-            model_path = train_result
-            
-        if model_path and os.path.exists(model_path):
-            print(f"\nModel trained and saved to: {model_path}")
-            print("You can now run the Flask application with the new model.")
-            
-            # Also print the parent directory for reference
-            print(f"Model directory: {os.path.dirname(os.path.abspath(model_path))}")
-            print(f"Files in model directory: {os.listdir(os.path.dirname(model_path))}")
-            
-        else:
-            print("\nError: Model training failed or model was not saved correctly.")
+        if train_result is None:
+            print("\nError: Model training failed.")
             return 1
+        
+        # Print training metrics
+        metrics = train_result.get('metrics', {})
+        print(f"\nModel trained successfully!")
+        print(f"  R² Score: {metrics.get('r2', 'N/A'):.4f}")
+        print(f"  RMSE:     {metrics.get('rmse', 'N/A'):.4f}")
+        print(f"  MAPE:     {metrics.get('mape', 'N/A'):.2f}%")
+        
+        # List saved models
+        model_dir = 'models'
+        if os.path.isdir(model_dir):
+            model_files = sorted(
+                [f for f in os.listdir(model_dir) if f.endswith('.pkl')],
+                key=lambda x: os.path.getmtime(os.path.join(model_dir, x)),
+                reverse=True
+            )
+            if model_files:
+                latest = os.path.join(model_dir, model_files[0])
+                print(f"\nLatest model: {latest}")
+                print("You can now run the Flask application with the new model.")
             
     except Exception as e:
         print(f"\nError during model training: {str(e)}")
