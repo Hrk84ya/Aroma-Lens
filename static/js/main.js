@@ -1,45 +1,41 @@
-// Update range input values
-const brewTimeEl = document.getElementById('brew_time');
-const waterTempEl = document.getElementById('water_temp');
-const ratioEl = document.getElementById('coffee_water_ratio');
-const acidityEl = document.getElementById('acidity_pref');
-const bitternessEl = document.getElementById('bitterness_pref');
-
-if (brewTimeEl) brewTimeEl.addEventListener('input', function() {
-	document.getElementById('brew_time_value').textContent = this.value + 's';
+// Range input live values
+const sliders = [
+	{ el: 'brew_time',          out: 'brew_time_value',      fmt: v => v + 's' },
+	{ el: 'water_temp',         out: 'water_temp_value',     fmt: v => v + '°C' },
+	{ el: 'coffee_water_ratio', out: 'ratio_value',          fmt: v => '1:' + v },
+	{ el: 'acidity_pref',       out: 'acidity_pref_value',   fmt: v => parseFloat(v).toFixed(1) },
+	{ el: 'bitterness_pref',    out: 'bitterness_pref_value',fmt: v => parseFloat(v).toFixed(1) },
+];
+sliders.forEach(s => {
+	const el = document.getElementById(s.el);
+	if (el) el.addEventListener('input', () => {
+		document.getElementById(s.out).textContent = s.fmt(el.value);
+	});
 });
 
-if (waterTempEl) waterTempEl.addEventListener('input', function() {
-	document.getElementById('water_temp_value').textContent = this.value + '°C';
-});
+// Score ring animation
+function animateScoreRing(score) {
+	const arc = document.getElementById('scoreArc');
+	if (!arc) return;
+	const circumference = 2 * Math.PI * 52; // r=52
+	const pct = Math.min(score / 10, 1);
+	arc.style.strokeDasharray = circumference;
+	arc.style.strokeDashoffset = circumference * (1 - pct);
+}
 
-if (ratioEl) ratioEl.addEventListener('input', function() {
-	document.getElementById('ratio_value').textContent = '1:' + this.value;
-});
-
-if (acidityEl) acidityEl.addEventListener('input', function() {
-	document.getElementById('acidity_pref_value').textContent = this.value;
-});
-
-if (bitternessEl) bitternessEl.addEventListener('input', function() {
-	document.getElementById('bitterness_pref_value').textContent = this.value;
-});
-
-// Handle form submission
+// Form submission
 const formEl = document.getElementById('coffeeForm');
 if (formEl) formEl.addEventListener('submit', async function(e) {
 	e.preventDefault();
-	console.log('Form submitted!'); // Debug logging
-	
-	// Show loading state
+
 	const submitBtn = document.getElementById('predictBtn');
 	const originalBtnText = submitBtn.innerHTML;
 	submitBtn.disabled = true;
-	submitBtn.innerHTML = '<i class="fas fa-mug-hot"></i> Predicting...';
+	submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Analyzing...';
 	document.getElementById('loading').style.display = 'block';
-	
+	document.getElementById('results').style.display = 'none';
+
 	try {
-		// Get form data mapped to backend expectations
 		const formData = new URLSearchParams({
 			brewing_method: document.getElementById('brewing_method').value,
 			bean_type: document.getElementById('bean_type').value,
@@ -51,59 +47,42 @@ if (formEl) formEl.addEventListener('submit', async function(e) {
 			acidity_pref: document.getElementById('acidity_pref').value,
 			bitterness_pref: document.getElementById('bitterness_pref').value
 		});
-		
-		console.log('Form data:', formData.toString()); // Debug logging
-		
-		// Send prediction request
+
 		const response = await fetch('/predict', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: formData
 		});
-		
 		const data = await response.json();
-		
-		console.log('Prediction response:', data); // Debug logging
-		
 		const resultsDiv = document.getElementById('results');
-		console.log('Results div found:', resultsDiv); // Debug logging
-		
+
 		if (data.success) {
-			console.log('Prediction successful, displaying results...'); // Debug logging
-			// Display results
 			document.getElementById('predictionScore').textContent = data.prediction.score;
 			document.getElementById('confidence').textContent = data.prediction.confidence;
 			document.getElementById('interpretation').textContent = data.prediction.interpretation || '';
-			
-			// Build flavor chips from interpretation keywords
+
+			// Animate score ring
+			animateScoreRing(data.prediction.score);
+
+			// Flavor chips
 			const chips = buildFlavorChips(data.prediction.interpretation);
-			const chipsContainer = document.getElementById('flavorChips');
-			chipsContainer.innerHTML = '';
-			chips.forEach(ch => chipsContainer.appendChild(ch));
-			
-			// Force show the results div with inline styles
+			const container = document.getElementById('flavorChips');
+			container.innerHTML = '';
+			chips.forEach(ch => container.appendChild(ch));
+
 			resultsDiv.style.setProperty('display', 'block', 'important');
-			resultsDiv.style.visibility = 'visible';
-			resultsDiv.style.opacity = '1';
-			resultsDiv.scrollIntoView({ behavior: 'smooth' });
-			console.log('Results displayed successfully'); // Debug logging
+			resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
 		} else {
-			console.log('Prediction failed:', data.error); // Debug logging
 			resultsDiv.innerHTML = `
-				<div class="card">
+				<div class="results-card">
 					<h3>Something went wrong</h3>
-					<p>${data.error || 'An unknown error occurred'}</p>
-				</div>
-			`;
+					<p class="interpretation-text">${data.error || 'An unknown error occurred'}</p>
+				</div>`;
 			resultsDiv.style.display = 'block';
-			resultsDiv.scrollIntoView({ behavior: 'smooth' });
-			console.error('Prediction error:', data.error);
 		}
 	} catch (error) {
 		alert('Error: ' + error.message);
-		console.error('Prediction error:', error);
 	} finally {
-		// Reset button state
 		submitBtn.disabled = false;
 		submitBtn.innerHTML = originalBtnText;
 		document.getElementById('loading').style.display = 'none';
@@ -112,16 +91,18 @@ if (formEl) formEl.addEventListener('submit', async function(e) {
 
 function buildFlavorChips(interpretation) {
 	const keywords = [
-		{ key: 'chocolate', icon: 'fa-solid fa-square', color: '#6F4E37' },
-		{ key: 'cocoa', icon: 'fa-solid fa-square', color: '#5a3a2c' },
-		{ key: 'caramel', icon: 'fa-solid fa-square', color: '#B87333' },
-		{ key: 'nut', icon: 'fa-solid fa-square', color: '#a67c52' },
-		{ key: 'hazelnut', icon: 'fa-solid fa-square', color: '#a67c52' },
-		{ key: 'almond', icon: 'fa-solid fa-square', color: '#a67c52' },
-		{ key: 'citrus', icon: 'fa-solid fa-lemon', color: '#d4a514' },
-		{ key: 'berry', icon: 'fa-solid fa-seedling', color: '#9CAF88' },
-		{ key: 'floral', icon: 'fa-solid fa-seedling', color: '#9CAF88' },
-		{ key: 'spice', icon: 'fa-solid fa-pepper-hot', color: '#b65c42' }
+		{ key: 'exceptional', icon: 'fa-solid fa-crown',       color: '#E8C88A' },
+		{ key: 'excellent',   icon: 'fa-solid fa-star',        color: '#D4A054' },
+		{ key: 'balanced',    icon: 'fa-solid fa-yin-yang',    color: '#9CAF88' },
+		{ key: 'chocolate',   icon: 'fa-solid fa-square',      color: '#8B6F47' },
+		{ key: 'cocoa',       icon: 'fa-solid fa-square',      color: '#6F4E37' },
+		{ key: 'caramel',     icon: 'fa-solid fa-square',      color: '#C4834E' },
+		{ key: 'nut',         icon: 'fa-solid fa-square',      color: '#a67c52' },
+		{ key: 'citrus',      icon: 'fa-solid fa-lemon',       color: '#d4a514' },
+		{ key: 'berry',       icon: 'fa-solid fa-seedling',    color: '#9CAF88' },
+		{ key: 'floral',      icon: 'fa-solid fa-seedling',    color: '#9CAF88' },
+		{ key: 'spice',       icon: 'fa-solid fa-pepper-hot',  color: '#C45B4A' },
+		{ key: 'extraction',  icon: 'fa-solid fa-flask',       color: '#D4A054' },
 	];
 	const chips = [];
 	const text = (interpretation || '').toLowerCase();
@@ -131,7 +112,7 @@ function buildFlavorChips(interpretation) {
 		}
 	});
 	if (chips.length === 0) {
-		chips.push(createChip('fa-solid fa-mug-hot', 'Balanced', '#9CAF88'));
+		chips.push(createChip('fa-solid fa-mug-hot', 'Smooth', '#9CAF88'));
 	}
 	return chips;
 }
