@@ -1,9 +1,7 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 import os
 import sys
 import logging
-import joblib
-import importlib.util
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -109,7 +107,17 @@ def predict():
         }), 500
         
     try:
-        # Get form data
+        # Get form data — validate that all fields are present
+        required_fields = ['brewing_method', 'bean_type', 'roast_level', 'grind_size',
+                          'water_temp', 'brew_time', 'coffee_water_ratio',
+                          'acidity_pref', 'bitterness_pref']
+        missing = [f for f in required_fields if not request.form.get(f)]
+        if missing:
+            return jsonify({
+                'success': False,
+                'error': f'Missing required fields: {", ".join(missing)}'
+            }), 400
+
         form_data = {
             'Brewing_Method': request.form.get('brewing_method'),
             'Bean_Type': request.form.get('bean_type'),
