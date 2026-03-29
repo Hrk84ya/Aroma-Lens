@@ -1,79 +1,54 @@
 # ☕ Coffee Flavor Predictor
 
-An interactive web application that predicts coffee flavor profiles using machine learning. This tool helps coffee enthusiasts and professionals optimize their brewing process for the perfect cup, with a beautiful and intuitive interface.
+A web app that predicts coffee flavor scores using an ensemble ML model (XGBoost + Random Forest + Gradient Boosting). Dial in your brewing parameters, get a 1–10 score, and track your experiments over time.
 
-## 🌟 Features
+## Features
 
-- **Web Interface**: Modern, responsive design for easy access from any device
-- **Flavor Prediction**: Get instant flavor score predictions (1-10) based on your brew
-- **Interactive Dashboard**: Visual feedback on flavor profiles and brewing parameters
-- **Comprehensive Parameters**:
-  - Multiple brewing methods (Pour-over, French Press, Espresso, etc.)
-  - Various bean types and roast levels
-  - Precise control over grind size, water temperature, and brew time
-  - Personal taste preferences (acidity, bitterness)
-- **Machine Learning**: Powered by XGBoost for accurate predictions
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Flavor Lab** — predict flavor scores from 9 brewing parameters (method, bean, roast, grind, temp, time, ratio, acidity pref, bitterness pref)
+- **My Brews** — prediction history saved to localStorage with stats, filtering, sorting, and one-click parameter reuse
+- **Brewing Tools** — brew timer with presets and notifications, plus a coffee-to-water ratio calculator
+- **Premium dark UI** — gold/dark theme with animated score ring, glassmorphism cards, and responsive layout
+- **Hot reload** — `POST /reload-model` to swap in a new model without restarting the server
 
-## 🚀 Quick Start
+## Quick Start
 
-### Prerequisites
-- Python 3.8+
-- pip (Python package manager)
-- Modern web browser
+```bash
+# Clone and enter the project
+git clone https://github.com/Hrk84ya/Aroma-Lens.git
+cd Aroma-Lens
 
-### Installation
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: .\venv\Scripts\activate
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/coffee-flavor-predictor.git
-   cd coffee-flavor-predictor
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-2. **Set up a virtual environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
+# Run the app
+python app.py
+```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Open `http://localhost:8000` in your browser.
 
-4. **Run the application**:
-   ```bash
-   python app.py
-   ```
+## Retraining the Model
 
-5. **Open in browser**:
-   Visit `http://localhost:8000` in your web browser
+```bash
+python retrain_model.py
+```
 
-## 🎯 Features in Action
+This trains a new ensemble model with Optuna hyperparameter optimization and saves it to `models/`. The Flask app picks up the latest `.pkl` on startup, or you can hot-reload via:
 
-### Web Interface
+```bash
+curl -X POST http://localhost:8000/reload-model
+```
 
-1. **Input Your Brew Parameters**:
-   - Select your brewing method, bean type, and roast level
-   - Adjust grind size, water temperature, and brew time
-   - Set your personal taste preferences
-
-2. **Get Instant Predictions**:
-   - View your predicted flavor score (1-10)
-   - See flavor profile breakdown
-   - Get brewing tips based on your inputs
-
-### Programmatic Usage
-
-You can also use the prediction model directly in your Python code:
+## Programmatic Usage
 
 ```python
 from improved_predict import CoffeeFlavorPredictor
 
-# Initialize predictor
-predictor = CoffeeFlavorPredictor()
+predictor = CoffeeFlavorPredictor('models/coffee_flavor_model_20250816_101933.pkl')
 
-# Make a prediction
 result = predictor.predict({
     'Brewing_Method': 'Pour-over',
     'Bean_Type': 'Arabica',
@@ -86,77 +61,50 @@ result = predictor.predict({
     'Bitterness_Pref': 4.0
 })
 
-print(f"Predicted Score: {result['prediction']:.1f}/10")
+print(f"Score: {result['prediction']}/10")
+print(f"Confidence: {result['confidence']:.0%}")
+print(result['interpretation'])
 ```
 
-## 🏆 Model Performance
-
-The underlying machine learning model has been rigorously evaluated:
-
-| Metric | Score | Description |
-|--------|-------|-------------|
-| RMSE   | 0.42  | Lower is better |
-| R²     | 0.93  | 1.0 is perfect prediction |
-| MAE    | 0.32  | Mean Absolute Error |
-| Cross-Validated R² | 0.90 | Performance on unseen data |
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
-coffee-flavor-predictor/
-├── static/                        # Static files (CSS, JS, images)
-│   ├── css/                      # Stylesheets
-│   ├── js/                       # JavaScript files
-│   └── images/                   # Image assets
-├── templates/                    # HTML templates
-│   ├── base.html                # Base template
-│   └── index.html               # Main application page
-├── models/                       # Saved ML models
+├── app.py                    # Flask app with routes and prediction endpoint
+├── improved_model.py         # Model training, feature engineering, evaluation
+├── improved_predict.py       # CoffeeFlavorPredictor class
+├── retrain_model.py          # CLI script to retrain the model
+├── synthetic_coffee_dataset.csv
+├── requirements.txt
+├── models/
 │   └── coffee_flavor_model_*.pkl
-├── app.py                       # Flask application
-├── improved_model.py            # Model training
-├── improved_predict.py          # Prediction logic
-├── requirements.txt             # Python dependencies
-└── README.md                    # This file
+├── templates/
+│   ├── base.html             # Base layout (dark premium theme)
+│   ├── index.html            # Flavor Lab (prediction form)
+│   ├── my_brews.html         # Prediction history
+│   └── brewing_tools.html    # Timer + calculator
+└── static/
+    ├── css/style.css
+    ├── js/
+    │   ├── main.js           # Form handling, score ring, localStorage save
+    │   ├── my-brews.js       # History rendering, filtering, sorting
+    │   └── brewing-tools.js  # Timer and calculator logic
+    └── images/
+        ├── logo.png
+        └── favicon.svg
 ```
 
-## 🤝 How to Contribute
+## Tech Stack
 
-Contributions are welcome! Here's how you can help:
+- **Backend**: Flask, scikit-learn, XGBoost, Optuna
+- **Frontend**: Vanilla JS, CSS (no frameworks), Chart.js
+- **ML**: VotingRegressor ensemble (XGBoost + RandomForest + GradientBoosting) with advanced feature engineering and SelectKBest feature selection
 
-1. **Report Issues**: Found a bug? Let us know!
-2. **Feature Requests**: Have an idea? We'd love to hear it!
-3. **Code Contributions**:
-   ```bash
-   # 1. Fork & clone the repo
-   git clone https://github.com/yourusername/coffee-flavor-predictor.git
-   cd coffee-flavor-predictor
-   
-   # 2. Create a feature branch
-   git checkout -b feature/amazing-feature
-   
-   # 3. Make your changes
-   # ...
-   
-   # 4. Commit and push
-   git commit -m 'Add amazing feature'
-   git push origin feature/amazing-feature
-   
-   # 5. Open a Pull Request
-   ```
+## Environment Variables
 
-## 📜 License
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | `dev-key-for-coffee-app` | Flask secret key. Set this in production. |
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## License
 
-## 🙏 Acknowledgments
-
-- Built with ❤️ for coffee enthusiasts and professionals
-- Special thanks to the open-source community for the amazing tools and libraries
-
----
-
-<div align="center">
-  <p>☕ Brewed with passion, powered by AI</p>
-  <p>Happy Brewing! 🚀</p>
-</div>
+MIT — see [LICENSE](LICENSE).
