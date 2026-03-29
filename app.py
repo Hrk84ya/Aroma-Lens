@@ -21,7 +21,15 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-for-coffee-app')
+
+# SECRET_KEY must be set via environment variable in production
+_default_secret = 'dev-key-for-coffee-app'
+app.secret_key = os.getenv('SECRET_KEY', _default_secret)
+if app.secret_key == _default_secret and not app.debug:
+    logging.getLogger(__name__).warning(
+        "SECRET_KEY is not set — using insecure default. "
+        "Set the SECRET_KEY environment variable for production."
+    )
 
 # Initialize the predictor and load the latest model
 def load_latest_model():
@@ -74,6 +82,15 @@ if predictor is None:
     logger.error("Failed to load any model. Please train a model first.")
 else:
     logger.info("Model loaded and ready for predictions!")
+
+@app.route('/reload-model', methods=['POST'])
+def reload_model():
+    """Reload the latest model without restarting the server."""
+    global predictor
+    predictor = load_latest_model()
+    if predictor is None:
+        return jsonify({'success': False, 'error': 'No model found to load.'}), 500
+    return jsonify({'success': True, 'message': 'Model reloaded successfully.'})
 
 @app.route('/')
 def home():
