@@ -145,9 +145,10 @@ def load_and_preprocess_data(filepath='synthetic_coffee_dataset.csv'):
         X = df.drop('Flavor_Score', axis=1)
         y = df['Flavor_Score']
         
-        # Split into train and test sets with stratification
+        # Split into train and test sets with stratification on a single column
+        # Using multi-column stratify creates too many unique groups and fails
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=df[categorical_cols]
+            X, y, test_size=0.2, random_state=42, stratify=df['Brewing_Method']
         )
         
         logger.info(f"Data loaded. Train shape: {X_train.shape}, Test shape: {X_test.shape}")
@@ -184,18 +185,6 @@ def create_preprocessor():
         ])
     
     return preprocessor
-
-def preprocess_data(X):
-    """Preprocess the input data by converting categorical columns to appropriate types."""
-    X_processed = X.copy()
-    categorical_features = ['Bean_Type', 'Roast_Level', 'Grind_Size', 'Brewing_Method']
-    
-    # Convert categorical columns to string type
-    for col in categorical_features:
-        if col in X_processed.columns:
-            X_processed[col] = X_processed[col].astype(str)
-    
-    return X_processed
 
 def preprocess_data(X, scaler=None, fit_scaler=False, feature_columns=None):
     """Preprocess the data with consistent handling of features."""
@@ -476,12 +465,13 @@ def train_model(X_train, y_train, use_cross_validation=True):
 def evaluate_model(model, X_test, y_test, scaler, numeric_features, categorical_features, feature_names=None, feature_engineer=None, selector=None):
     """Evaluate the ensemble model and log metrics."""
     try:
-        # Preprocess the test data using the same scaler and feature columns
+        # Preprocess the test data using the same scaler — do NOT pass feature_names
+        # as feature_columns here because feature_names are the *selected* features,
+        # not the one-hot encoded column set that preprocess_data produces.
         X_test_processed, _, _ = preprocess_data(
             X_test, 
             scaler=scaler, 
-            fit_scaler=False, 
-            feature_columns=feature_names
+            fit_scaler=False
         )
         
         # Apply feature engineering if available
@@ -490,9 +480,11 @@ def evaluate_model(model, X_test, y_test, scaler, numeric_features, categorical_
         else:
             X_test_engineered = X_test_processed
         
-        # For evaluation, we'll use the engineered features directly without feature selection
-        # This avoids the feature name mismatch issue while still getting accurate predictions
-        X_test_final = X_test_engineered
+        # Apply feature selection to match what the model was trained on
+        if selector is not None:
+            X_test_final = selector.transform(X_test_engineered)
+        else:
+            X_test_final = X_test_engineered
         
         # Make predictions
         y_pred = model.predict(X_test_final)
