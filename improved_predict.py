@@ -3,9 +3,7 @@ import pandas as pd
 import numpy as np
 import logging
 import os
-import sys
-from typing import Dict, Union, Optional, List
-from pathlib import Path
+from typing import Dict, List
 
 # Import the AdvancedFeatureEngineering class from the improved_model module
 from improved_model import AdvancedFeatureEngineering
@@ -179,12 +177,20 @@ class CoffeeFlavorPredictor:
             input_processed, _, _ = preprocess_data(
                 input_df, 
                 scaler=self.scaler, 
-                fit_scaler=False, 
-                feature_columns=self.feature_names
+                fit_scaler=False
             )
             
-            # Step 2: Use the preprocessed data directly (it already includes engineered features)
-            input_final = input_processed
+            # Step 2: Apply feature engineering (same as training)
+            if self.feature_engineer is not None:
+                input_engineered = self.feature_engineer.transform(input_processed)
+            else:
+                input_engineered = input_processed
+            
+            # Step 3: Apply feature selection (same as training)
+            if self.selector is not None:
+                input_final = self.selector.transform(input_engineered)
+            else:
+                input_final = input_engineered
             
             # Convert to numpy array if it's a DataFrame (XGBoost expects numpy arrays)
             if hasattr(input_final, 'values'):
