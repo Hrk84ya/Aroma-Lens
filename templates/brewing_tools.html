@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/brewing-tools.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="tools-page">
     <div class="section-badge"><i class="fas fa-tools"></i> Brewing Tools</div>
@@ -191,7 +195,4 @@
 }
 </style>
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/brewing-tools.js') }}"></script>
-{% endblock %}
 {% endblock %}

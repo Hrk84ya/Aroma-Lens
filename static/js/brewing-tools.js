@@ -16,7 +16,7 @@ class BrewingTimer {
         this.startTimerBtn = document.getElementById('start-timer');
         this.pauseTimerBtn = document.getElementById('pause-timer');
         this.resetTimerBtn = document.getElementById('reset-timer');
-        this.timerPresets = document.querySelectorAll('.timer-preset');
+        this.timerPresets = document.querySelectorAll('.preset-chip');
     }
 
     setupEventListeners() {
@@ -34,6 +34,7 @@ class BrewingTimer {
         this.timerPresets.forEach(preset => {
             preset.addEventListener('click', (e) => {
                 const minutes = parseInt(e.target.dataset.minutes);
+                this.timerInput.value = minutes;
                 this.setTimer(minutes * 60);
             });
         });
